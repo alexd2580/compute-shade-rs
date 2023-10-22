@@ -1,17 +1,10 @@
 use std::{rc::Rc, time};
 
 use cell::Cell;
-use clap::Parser;
 
-mod analysis;
-mod audio;
-mod averages;
-mod beat_detection;
 mod cell;
-mod dft;
 mod error;
 mod ring_buffer;
-mod server;
 mod thread_shared;
 mod timer;
 mod utils;
@@ -30,25 +23,6 @@ struct Visualizer {
 
     high_pass_gpu: Rc<vulkan::multi_buffer::MultiBuffer>,
     high_pass_dft_gpu: Rc<vulkan::multi_buffer::MultiBuffer>,
-
-    // let dft_result_size = Dft::output_byte_size(args.dft_size) + mem::size_of::<i32>();
-    // history: History::new(history_size),
-    // history_gpu: vulkan.new_multi_buffer("history", history_gpu_size, Some(1))?,
-    // // Averages.
-    // long_avg: AlphaAvg::new(0.99),
-    // short_avg: WindowedAvg::new((0.2 * frame_rate as f32) as usize),
-    // // Beat detection.
-    // noise_threshold_factor: 0.25,
-    // beat_sigma_threshold_factor: 2.2,
-    // is_high: false,
-    // is_beat: false,
-    // // BPM detection.
-    // autocorrelation: Dft::new(8 * frame_rate),
-    // autocorrelation_gpu: vulkan.new_multi_buffer(
-    //     "autocorrelation",
-    //     autocorrelation_gpu_size,
-    //     Some(1),
-    // )?,
 
     // These should be dropped last.
     images: Vec<Rc<vulkan::multi_image::MultiImage>>,
@@ -82,43 +56,11 @@ impl Visualizer {
         Ok(())
     }
 
-    fn new(
-        args: &Args,
-        analysis: &analysis::Analysis,
-    ) -> error::VResult<(winit::event_loop::EventLoop<()>, Visualizer)> {
+    fn new(args: &Args) -> error::VResult<(winit::event_loop::EventLoop<()>, Visualizer)> {
         let (event_loop, window) = window::Window::new()?;
         let mut vulkan = vulkan::Vulkan::new(&window, &args.shader_paths, !args.no_vsync)?;
 
-        let signal_gpu =
-            vulkan.new_multi_buffer("signal", analysis.audio.signal.serialized_size(), Some(1))?;
-        let low_pass_gpu =
-            vulkan.new_multi_buffer("low_pass", analysis.low_pass.serialized_size(), Some(1))?;
-        let high_pass_gpu =
-            vulkan.new_multi_buffer("high_pass", analysis.high_pass.serialized_size(), Some(1))?;
-
-        let signal_dft_gpu = vulkan.new_multi_buffer(
-            "signal_dft",
-            analysis.signal_dft.serialized_size(),
-            Some(1),
-        )?;
-        let low_pass_dft_gpu = vulkan.new_multi_buffer(
-            "low_pass_dft",
-            analysis.low_pass_dft.serialized_size(),
-            Some(1),
-        )?;
-        let high_pass_dft_gpu = vulkan.new_multi_buffer(
-            "high_pass_dft",
-            analysis.high_pass_dft.serialized_size(),
-            Some(1),
-        )?;
-
         let mut visualizer = Self {
-            signal_gpu,
-            signal_dft_gpu,
-            low_pass_gpu,
-            low_pass_dft_gpu,
-            high_pass_gpu,
-            high_pass_dft_gpu,
             images: Vec::new(),
             vulkan,
         };
@@ -148,22 +90,6 @@ impl Visualizer {
             .audio
             .signal
             .write_to_pointer(read_index, write_index, self.signal_gpu.mapped(0));
-        analysis
-            .low_pass
-            .write_to_pointer(read_index, write_index, self.low_pass_gpu.mapped(0));
-        analysis
-            .high_pass
-            .write_to_pointer(read_index, write_index, self.high_pass_gpu.mapped(0));
-
-        analysis
-            .signal_dft
-            .write_to_pointer(self.signal_dft_gpu.mapped(0));
-        analysis
-            .low_pass_dft
-            .write_to_pointer(self.low_pass_dft_gpu.mapped(0));
-        analysis
-            .high_pass_dft
-            .write_to_pointer(self.high_pass_dft_gpu.mapped(0));
 
         let mut push_constant_values = std::collections::HashMap::new();
 
@@ -192,53 +118,7 @@ impl Drop for Visualizer {
     }
 }
 
-/// Run an audio visualizer.
-#[derive(Parser, Debug, Clone)]
-pub struct Args {
-    /// The shader module path
-    #[arg(short, long, num_args = 0.., default_value = "shaders/debug.comp")]
-    shader_paths: Vec<std::path::PathBuf>,
-
-    /// The DFT size
-    #[arg(short, long, default_value = "2048")]
-    dft_size: usize,
-
-    /// The audio buffer size
-    #[arg(short, long, default_value = "4")]
-    audio_buffer_sec: u32,
-
-    /// Enable vsync
-    #[arg(long, action = clap::ArgAction::SetTrue)]
-    no_vsync: bool,
-
-    /// Redirect the audio through a virtual pulseaudio sink
-    #[arg(long, action = clap::ArgAction::SetTrue)]
-    no_virtual_sink: bool,
-
-    /// Create a websocket server that echoes some info
-    #[arg(long, action = clap::ArgAction::SetTrue)]
-    websocket: bool,
-
-    /// Display the visualizer
-    #[arg(long, action = clap::ArgAction::SetTrue)]
-    headless: bool,
-}
-
 fn run_main(args: &Args) -> error::VResult<()> {
-    // Audio launches its own pulseaudio something threads, no ticking required.
-    let audio = audio::Audio::new(args.audio_buffer_sec, !args.no_virtual_sink)?;
-
-    // The websocket server launches a tokio runtime and listens to a channel.
-    // No ticking apart from populating the channel is required.
-    let server = args.websocket.then(|| server::Server::start());
-
-    // Analysis should be ticked once per "frame".
-    let analysis = {
-        let sender = server.as_ref().map(|(_, sender)| sender.clone());
-        let analysis = analysis::Analysis::new(args, audio, sender);
-        Cell::new(analysis)
-    };
-
     // The visualizer should also be ticked once per frame.
     let visualizer = (!args.headless)
         .then(|| Visualizer::new(&args, &analysis.as_ref()))
@@ -276,8 +156,7 @@ fn run_main(args: &Args) -> error::VResult<()> {
 fn main() {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
     log::info!("Initializing...");
-    let args = Args::parse();
-    if let Err(err) = run_main(&args) {
+    if let Err(err) = run_main() {
         log::error!("{}", err);
     }
     log::info!("Terminating...");
