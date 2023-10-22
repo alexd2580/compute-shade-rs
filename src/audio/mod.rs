@@ -293,6 +293,9 @@ pub struct Audio {
     input_stream: cpal::Stream,
     #[allow(dead_code)]
     delayed_output: Option<DelayedOutput>,
+
+
+    pub sample_rate: usize,
 }
 
 impl Deref for Audio {
@@ -337,12 +340,26 @@ impl Audio {
         let delayed_output = delayed_echo
             .then(|| DelayedOutput::new(&cpal, &ring_buffer))
             .transpose()?;
+        let host = cpal::default_host();
+
+        debug!("Initializing audio streams");
+        let input_stream = init_input_stream(&host, sample_rate, &ring_buffer)?;
+        let output_stream = if echo {
+            Some(init_output_stream(&host, sample_rate)?)
+        } else {
+            None
+        };
+
+        debug!("Running audio streams");
+        input_stream.play()?;
+        output_stream.as_ref().map(cpal::Stream::play).transpose()?;
 
         Ok(Audio {
             cpal,
             ring_buffer,
             input_stream,
             delayed_output,
+            sample_rate,
         })
     }
 }

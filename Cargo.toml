@@ -1,5 +1,5 @@
 [package]
-name = "visualize-rs"
+name = "compute-shade-rs"
 version = "0.1.0"
 rust-version = "1.70"
 edition = "2021"
@@ -7,20 +7,11 @@ edition = "2021"
 [dependencies]
 ash = { version = "0.37.0", features = ["linked"] }
 ash-window = "0.12.0"
-cpal = "0.14.2"
+ctrlc = "3.4.1"
 filetime = "0.2.18"
+glsl = "*"
 log = "0.4.17"
 raw-window-handle = "0.5.0"
-realfft = "3.1.0"
-rustfft = "6.1.0"
+shaderc = "0.8.2"
 simple_logger = "4.0.0"
 winit = "0.27.5"
-glsl = "*"
-clap = { version = "4.3.1", features = ["derive"] }
-shaderc = "0.8.2"
-tokio = { version = "1.31.0", features = ["full"] }
-tokio-tungstenite = "0.20.0"
-futures = "0.3.28"
-byteorder = "1.4.3"
-libpulse-binding = "2.28.1"
-ctrlc = "3.4.1"
