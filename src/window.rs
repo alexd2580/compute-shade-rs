@@ -20,6 +20,7 @@ impl Window {
 
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
+            .with_resizable(false)
             .with_title("visualize-rs")
             .build(&event_loop)?;
 

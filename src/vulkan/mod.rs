@@ -643,6 +643,7 @@ impl Vulkan {
         self.num_frames += 1;
 
         if let Err(Error::Vk(vk::Result::ERROR_OUT_OF_DATE_KHR)) = present_result {
+            info!("Swapchain is out of date, resizing app");
             self.reinitialize_swapchain()?;
             Ok(Some(Event::Resized))
         } else {

@@ -1,0 +1,41 @@
+#version 450
+
+// TODO
+// look into this:
+// https://computergraphics.stackexchange.com/questions/9956/performance-of-compute-shaders-vs-fragment-shaders-for-deferred-rendering
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(push_constant, std140) uniform PushConstants {
+  layout(offset = 0) bool bool_value;
+  layout(offset = 4) float float_value;
+} constants;
+
+layout(rgba32f, binding = 0) uniform image2D present;
+
+// layout(rgba32f, binding = 1) uniform image2D image;
+// layout(rgba32f, binding = 2) uniform image2D image_prev;
+
+// layout(binding = 3) buffer IntBuffer {
+//     int int_data[];
+// } buffer_1;
+//
+// layout(binding = 4) buffer Dft {
+//     float float_data[];
+// } buffer_2;
+
+void main() {
+    ivec2 ipixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 iimage_size = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
+    imageStore(present, ipixel_coords, vec4(ipixel_coords / vec2(iimage_size), 0, 1));
+    return;
+
+    // vec3 add_color = fract(constants.frame_index * 0.1203948230 * vec3(float(ipixel_coords.x) / iimage_size.x, float(ipixel_coords.y) / iimage_size.y, 0));
+    // vec3 load_color = imageLoad(present, ipixel_coords).rgb;
+    //
+    // if (constants.frame_index % 60 < 60) {
+    //     imageStore(present, ipixel_coords, vec4(add_color, 1));
+    // } else {
+    //     imageStore(present, ipixel_coords, vec4(load_color, 1));
+    // }
+}

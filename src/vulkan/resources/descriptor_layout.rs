@@ -1,4 +1,4 @@
-use std::{ops::Deref, rc::Rc};
+use std::{collections::HashMap, ops::Deref, rc::Rc};
 
 use log::debug;
 
@@ -24,6 +24,21 @@ impl Deref for DescriptorLayout {
 impl DescriptorLayout {
     pub unsafe fn new(device: &Rc<Device>, descriptors: &Descriptors) -> Result<Rc<Self>, Error> {
         debug!("Creating descriptor layouts");
+
+        let mut used_bindings = HashMap::new();
+        for descriptor in descriptors.iter() {
+            let binding = descriptor.binding();
+            let name = &descriptor.name;
+            if let Some(prev) = used_bindings.get(&binding) {
+                let msg = format!(
+                    "Binding {} is shared by {} and {}. All bindings must be unique",
+                    binding, descriptor.name, prev
+                );
+                return Err(Error::Local(msg));
+            } else {
+                used_bindings.insert(binding, name);
+            }
+        }
 
         let device = device.clone();
         let bindings = descriptors

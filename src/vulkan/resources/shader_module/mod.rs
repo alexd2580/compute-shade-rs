@@ -1,4 +1,5 @@
 use log::{debug, error};
+use shaderc::CompileOptions;
 use std::{
     fmt::Display,
     fs,
@@ -25,13 +26,15 @@ fn compile_shader_file(file: &Path) -> Result<shaderc::CompilationArtifact, Erro
         .ok_or_else(|| Error::Local("Failed to create shaderc compiler".to_owned()))?;
 
     let file_name = file.file_name().unwrap().to_str().unwrap();
+    let mut compile_options = CompileOptions::new().unwrap();
+    compile_options.set_generate_debug_info();
     let binary = compiler
         .compile_into_spirv(
             &source,
             shaderc::ShaderKind::Compute,
             file_name,
             "main",
-            None,
+            Some(&compile_options),
         )
         .map_err(|err| match err {
             shaderc::Error::CompilationError(_, msg) => {

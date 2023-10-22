@@ -16,7 +16,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Local(str) => write!(f, "{str}"),
-            Error::Vk(code) => write!(f, "{code}"),
+            Error::Vk(code) => write!(f, "VK Error\n{code}"),
             Error::Os(error) => write!(f, "OS Error\n{error}"),
             Error::Io(error) => write!(f, "IO Error\n{error}"),
             Error::Parse(glsl::parser::ParseError { info }) => {
@@ -29,6 +29,9 @@ impl Display for Error {
 
 impl From<ash::vk::Result> for Error {
     fn from(value: ash::vk::Result) -> Self {
+        if value != ash::vk::Result::ERROR_OUT_OF_DATE_KHR {
+            panic!("{}", value);
+        }
         Self::Vk(value)
     }
 }

@@ -39,6 +39,10 @@ pub struct DescriptorBinding {
 }
 
 impl DescriptorBinding {
+    pub fn binding(&self) -> usize {
+        self.binding
+    }
+
     pub fn as_descriptor_set_layout_binding(&self) -> vk::DescriptorSetLayoutBinding {
         vk::DescriptorSetLayoutBinding {
             binding: u32::try_from(self.binding).unwrap(),
