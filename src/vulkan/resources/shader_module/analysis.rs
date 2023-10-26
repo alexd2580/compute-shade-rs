@@ -8,6 +8,7 @@ use crate::error::{Error, VResult};
 
 enum MemoryLayout {
     STD140,
+    STD430,
 }
 
 #[derive(Debug)]
@@ -60,6 +61,7 @@ fn simplify_layout_qualifier_spec(
                 ("rgba32f", None) => type_properties.image_format = Some(ImageFormat::RGBA32F),
                 ("push_constant", None) => type_properties.push_constant = true,
                 ("std140", None) => type_properties.memory_layout = Some(MemoryLayout::STD140),
+                ("std430", None) => type_properties.memory_layout = Some(MemoryLayout::STD430),
                 other => {
                     let msg = format!("Unexpected layout qualifier spec: {other:?}");
                     return Err(Error::Local(msg));

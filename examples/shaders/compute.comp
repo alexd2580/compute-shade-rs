@@ -32,8 +32,16 @@ layout(binding=4) buffer FloatBuffer {
     float float_data[];
 };
 
+// Macro invocations need to be terminated with `;`.... even if a `;` is not
+// necessary. This is a workaround for a bug in phaazon/glsl which is used to
+// parse and analyze the shader IO.
+// For reference see: https://github.com/phaazon/glsl/issues/148
+#define A(b, c) \
+    ivec2 c = ivec2(b);
+
 void main() {
-    ivec2 ipixel_coords = ivec2(gl_GlobalInvocationID.st);
+    // ivec2 ipixel_coords = ivec2(gl_GlobalInvocationID.st);
+    A(gl_GlobalInvocationID.st, ipixel_coords);
     ivec2 iimage_size = ivec2(gl_NumWorkGroups.st * gl_WorkGroupSize.st);
 
     int buffer_size = size_1 + globals.size_2;
