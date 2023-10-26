@@ -124,12 +124,9 @@ impl ShaderModule {
     }
 
     pub fn push_constants_declaration(&self) -> Option<&analysis::BlockDeclaration> {
-        self.block_declarations.iter().find(|declaration| {
-            declaration
-                .layout_qualifiers
-                .iter()
-                .any(|qualifier| qualifier == "push_constant")
-        })
+        self.block_declarations
+            .iter()
+            .find(|declaration| declaration.push_constant)
     }
 }
 

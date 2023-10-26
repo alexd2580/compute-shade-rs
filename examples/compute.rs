@@ -1,22 +1,19 @@
 use std::{mem, rc::Rc};
 
-use compute_shade_rs as comp;
-
-// Required to use run_return on event loop.
-use winit::platform::run_return::EventLoopExtRunReturn;
+use compute_shade_rs::{error, event_loop, vulkan, window, winit};
 
 struct App {
-    gpu_buffer_1: Rc<comp::vulkan::multi_buffer::MultiBuffer>,
-    gpu_buffer_2: Rc<comp::vulkan::multi_buffer::MultiBuffer>,
+    gpu_buffer_1: Rc<vulkan::multi_buffer::MultiBuffer>,
+    gpu_buffer_2: Rc<vulkan::multi_buffer::MultiBuffer>,
 
-    images: Vec<Rc<comp::vulkan::multi_image::MultiImage>>,
+    images: Vec<Rc<vulkan::multi_image::MultiImage>>,
 
-    vulkan: comp::vulkan::Vulkan,
-    window: comp::window::Window,
+    vulkan: vulkan::Vulkan,
+    _window: window::Window,
 }
 
 impl App {
-    fn reinitialize_images(&mut self) -> comp::error::VResult<()> {
+    fn reinitialize_images(&mut self) -> error::VResult<()> {
         self.images.clear();
 
         // let vulkan = &mut self.vulkan;
@@ -29,10 +26,10 @@ impl App {
         Ok(())
     }
 
-    fn new() -> comp::error::VResult<(winit::event_loop::EventLoop<()>, Self)> {
+    fn new(event_loop: &event_loop::EventLoop) -> error::VResult<Self> {
         let shader_paths = vec![std::path::Path::new("examples/shaders/compute.comp")];
-        let (event_loop, window) = comp::window::Window::new()?;
-        let mut vulkan = comp::vulkan::Vulkan::new(&window, &shader_paths, true)?;
+        let window = window::Window::new(event_loop)?;
+        let mut vulkan = vulkan::Vulkan::new(&window, &shader_paths, true)?;
 
         // TODO
         let gpu_buffer_1 =
@@ -45,25 +42,27 @@ impl App {
             gpu_buffer_2,
             images: Vec::new(),
             vulkan,
-            window,
+            _window: window,
         };
         app.reinitialize_images()?;
-        Ok((event_loop, app))
+        Ok(app)
     }
 
     fn run_vulkan(
         &mut self,
-        push_constant_values: std::collections::HashMap<String, comp::vulkan::Value>,
-    ) -> comp::error::VResult<()> {
+        push_constant_values: std::collections::HashMap<String, vulkan::Value>,
+    ) -> error::VResult<()> {
         match unsafe { self.vulkan.tick(&push_constant_values)? } {
             None => (),
-            Some(comp::vulkan::Event::Resized) => self.reinitialize_images()?,
+            Some(vulkan::Event::Resized) => self.reinitialize_images()?,
         }
         Ok(())
     }
+}
 
-    fn tick(&mut self) -> winit::event_loop::ControlFlow {
-        use comp::vulkan::Value::{Bool, F32};
+impl event_loop::App for App {
+    fn tick(&mut self) -> event_loop::ControlFlow {
+        use vulkan::Value::{Bool, F32};
 
         let target_1 = self.gpu_buffer_1.mapped(0);
         let target_2 = self.gpu_buffer_2.mapped(0);
@@ -81,10 +80,10 @@ impl App {
         ]);
 
         let result = match self.run_vulkan(push_constant_values) {
-            Ok(()) => winit::event_loop::ControlFlow::Poll,
+            Ok(()) => event_loop::ControlFlow::Continue,
             Err(err) => {
                 log::error!("{err}");
-                winit::event_loop::ControlFlow::ExitWithCode(1)
+                event_loop::ControlFlow::Exit(1)
             }
         };
 
@@ -92,6 +91,16 @@ impl App {
         self.vulkan.num_frames += 1;
 
         result
+    }
+
+    fn handle_event(&mut self, event: &event_loop::Event) -> event_loop::ControlFlow {
+        match event {
+            event_loop::Event::Close => event_loop::ControlFlow::Exit(0),
+            event_loop::Event::Key(_, winit::event::VirtualKeyCode::Q) => {
+                event_loop::ControlFlow::Exit(0)
+            }
+            _ => event_loop::ControlFlow::Continue,
+        }
     }
 }
 
@@ -101,13 +110,10 @@ impl Drop for App {
     }
 }
 
-fn run_main() -> comp::error::VResult<()> {
-    let (mut event_loop, app) = App::new()?;
-    let app = comp::cell::Cell::new(app);
-    event_loop.run_return(|event, &_, control_flow| {
-        *control_flow = comp::window::handle_event(&event, &|| app.as_mut_ref().tick());
-    });
-    Ok(())
+fn run_main() -> error::VResult<i32> {
+    let event_loop = event_loop::EventLoop::default();
+    let mut app = App::new(&event_loop)?;
+    Ok(event_loop.run(&mut app))
 }
 
 fn main() {

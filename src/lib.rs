@@ -1,5 +1,8 @@
+pub use winit;
+
 pub mod cell;
 pub mod error;
+pub mod event_loop;
 pub mod ring_buffer;
 pub mod thread_shared;
 pub mod timer;

@@ -27,7 +27,8 @@ layout(rgba32f, binding = 0) uniform image2D present;
 void main() {
     ivec2 ipixel_coords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 iimage_size = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
-    imageStore(present, ipixel_coords, vec4(ipixel_coords / vec2(iimage_size), 0, 1));
+    vec2 uv = vec2(ipixel_coords) / vec2(iimage_size);
+    imageStore(present, ipixel_coords, vec4(uv, 0, 1));
     return;
 
     // vec3 add_color = fract(constants.frame_index * 0.1203948230 * vec3(float(ipixel_coords.x) / iimage_size.x, float(ipixel_coords.y) / iimage_size.y, 0));

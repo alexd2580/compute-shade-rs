@@ -1,30 +1,22 @@
-use std::{thread, time};
-
 use log::debug;
-
-use ash::vk::SurfaceKHR as VkSurface;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
-use winit::{
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window as WinitWindow, WindowBuilder},
-};
+use winit::{dpi::PhysicalPosition, window::CursorGrabMode};
 
-use crate::{error::VResult, vulkan::resources::instance::Instance};
+use crate::{error::VResult, event_loop::EventLoop, vulkan::resources::instance::Instance};
+use ash::vk::SurfaceKHR as VkSurface;
 
-pub struct Window(WinitWindow);
+pub struct Window(winit::window::Window);
 
 impl Window {
-    pub fn new() -> VResult<(EventLoop<()>, Self)> {
+    pub fn new(event_loop: &EventLoop) -> VResult<Self> {
         debug!("Initializing video system");
 
-        let event_loop = EventLoop::new();
-        let window = WindowBuilder::new()
+        let window = winit::window::WindowBuilder::new()
             .with_resizable(false)
             .with_title("visualize-rs")
-            .build(&event_loop)?;
+            .build(event_loop)?;
 
-        Ok((event_loop, Window(window)))
+        Ok(Window(window))
     }
 
     pub fn enumerate_required_extensions(&self) -> VResult<Vec<*const i8>> {
@@ -44,42 +36,24 @@ impl Window {
             )?)
         }
     }
-}
 
-pub fn handle_event(event: &Event<()>, tick: &dyn Fn() -> ControlFlow) -> ControlFlow {
-    match event {
-        Event::WindowEvent {
-            event: WindowEvent::CloseRequested,
-            ..
-        } => ControlFlow::Exit,
-        Event::WindowEvent {
-            event:
-                WindowEvent::KeyboardInput {
-                    input:
-                        KeyboardInput {
-                            state: ElementState::Pressed,
-                            virtual_keycode: Some(key),
-                            ..
-                        },
-                    ..
-                },
-            ..
-        } => match key {
-            VirtualKeyCode::Escape | VirtualKeyCode::Q => ControlFlow::Exit,
-            VirtualKeyCode::K => {
-                thread::sleep(time::Duration::from_secs(1));
-                ControlFlow::Poll
-            }
-            _ => ControlFlow::Poll,
-        },
-        Event::WindowEvent {
-            event: WindowEvent::Resized(..),
-            ..
-        } => {
-            // Ignoring window event. Resize handled via Vulkan.
-            ControlFlow::Poll
+    pub fn set_cursor_grab(&self, lock: bool) {
+        let _ = if lock {
+            self.0
+                .set_cursor_grab(CursorGrabMode::Confined)
+                .or_else(|_| self.0.set_cursor_grab(CursorGrabMode::Locked))
+        } else {
+            self.0.set_cursor_grab(CursorGrabMode::None)
         }
-        Event::MainEventsCleared => tick(),
-        _ => ControlFlow::Poll,
+        .map(|_| self.0.set_cursor_visible(!lock));
+    }
+
+    pub fn set_cursor_position(&self, x: u32, y: u32) {
+        let _ = self.0.set_cursor_position(PhysicalPosition::new(x, y));
+    }
+
+    pub fn size(&self) -> (u32, u32) {
+        let size = self.0.inner_size();
+        (size.width, size.height)
     }
 }

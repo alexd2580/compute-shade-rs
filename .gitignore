@@ -1,3 +1,4 @@
 shaders/*.spv
 /target
 /plot
+*.cap
