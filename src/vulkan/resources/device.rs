@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::{self, extensions, vk};
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{instance::Instance, physical_device::PhysicalDevice};
 
@@ -21,10 +21,7 @@ impl Deref for Device {
 }
 
 impl Device {
-    pub unsafe fn new(
-        instance: &Instance,
-        physical_device: &PhysicalDevice,
-    ) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(instance: &Instance, physical_device: &PhysicalDevice) -> VResult<Rc<Self>> {
         debug!("Creating device");
 
         let compute_queue_create_info = vk::DeviceQueueCreateInfo::builder()
@@ -50,7 +47,7 @@ impl Device {
 
         let device = instance.create_device(**physical_device, &device_create_info, None)?;
 
-        Ok(Rc::new(Device { device }))
+        Ok(Rc::new(Self { device }))
     }
 }
 

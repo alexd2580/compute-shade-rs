@@ -4,7 +4,7 @@ use ash::{extensions::khr::Swapchain as SwapchainLoader, vk};
 
 use log::debug;
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{surface::Surface, surface_info::SurfaceInfo};
 
@@ -27,7 +27,7 @@ impl Swapchain {
         surface_info: &SurfaceInfo,
         swapchain_loader: &SwapchainLoader,
         old_swapchain: Option<vk::SwapchainKHR>,
-    ) -> Result<Rc<Swapchain>, Error> {
+    ) -> VResult<Rc<Swapchain>> {
         debug!("Creating swapchain");
         let swapchain_loader = swapchain_loader.clone();
         let surface_format = &surface_info.surface_format;

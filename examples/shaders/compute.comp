@@ -4,31 +4,47 @@
 // look into this:
 // https://computergraphics.stackexchange.com/questions/9956/performance-of-compute-shaders-vs-fragment-shaders-for-deferred-rendering
 
-layout(local_size_x = 8, local_size_y = 8) in;
+layout(local_size_x=8, local_size_y=8) in;
 
 layout(push_constant, std140) uniform PushConstants {
-  layout(offset = 0) bool bool_value;
-  layout(offset = 4) float float_value;
+  layout(offset = 4) bool bool_value;
+  layout(offset = 8) float float_value;
 } constants;
 
-layout(rgba32f, binding = 0) uniform image2D present;
+layout(rgba32f, binding=0) uniform image2D present;
 
 // layout(rgba32f, binding = 1) uniform image2D image;
 // layout(rgba32f, binding = 2) uniform image2D image_prev;
 
-// layout(binding = 3) buffer IntBuffer {
-//     int int_data[];
-// } buffer_1;
-//
-// layout(binding = 4) buffer Dft {
-//     float float_data[];
-// } buffer_2;
+layout(std140, binding=1) uniform Globals {
+    int size_1;
+};
+
+layout(std140, binding=2) uniform NamedGlobals {
+    int size_2;
+} globals;
+
+layout(binding=3) buffer IntBuffer {
+    int int_data[];
+} buffer_1;
+
+layout(binding=4) buffer FloatBuffer {
+    float float_data[];
+};
 
 void main() {
-    ivec2 ipixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 iimage_size = ivec2(gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
+    ivec2 ipixel_coords = ivec2(gl_GlobalInvocationID.st);
+    ivec2 iimage_size = ivec2(gl_NumWorkGroups.st * gl_WorkGroupSize.st);
+
+    int buffer_size = size_1 + globals.size_2;
+
+    int pixel_index = ipixel_coords.t * iimage_size.s + ipixel_coords.s;
+    int int_val = buffer_1.int_data[ipixel_coords.s % buffer_size];
+    float float_val = float_data[ipixel_coords.t % buffer_size];
+
     vec2 uv = vec2(ipixel_coords) / vec2(iimage_size);
-    imageStore(present, ipixel_coords, vec4(uv, 0, 1));
+    vec3 color = vec3(float_val, constants.bool_value ? constants.float_value : 0.0, float(int_val) / 100);
+    imageStore(present, ipixel_coords, vec4(color, 1));
     return;
 
     // vec3 add_color = fract(constants.frame_index * 0.1203948230 * vec3(float(ipixel_coords.x) / iimage_size.x, float(ipixel_coords.y) / iimage_size.y, 0));

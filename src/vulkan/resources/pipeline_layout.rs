@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::{Error, VResult};
 
 use super::{descriptor_layout::DescriptorLayout, device::Device, shader_module::ShaderModule};
 
@@ -26,7 +26,7 @@ impl PipelineLayout {
         device: &Rc<Device>,
         shader_module: &ShaderModule,
         descriptor_layout: &DescriptorLayout,
-    ) -> Result<Rc<Self>, Error> {
+    ) -> VResult<Rc<Self>> {
         debug!("Creating pipeline layout");
         let device = device.clone();
 
@@ -57,7 +57,7 @@ impl PipelineLayout {
             .set_layouts(&layouts);
         let pipeline_layout = device.create_pipeline_layout(&layout_create_info, None)?;
 
-        Ok(Rc::new(PipelineLayout {
+        Ok(Rc::new(Self {
             device,
             pipeline_layout,
         }))

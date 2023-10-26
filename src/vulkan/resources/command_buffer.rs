@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::{self, vk};
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{command_pool::CommandPool, device::Device};
 
@@ -23,7 +23,7 @@ impl Deref for CommandBuffer {
 }
 
 impl CommandBuffer {
-    pub fn new(device: &Rc<Device>, command_pool: &Rc<CommandPool>) -> Result<Rc<Self>, Error> {
+    pub fn new(device: &Rc<Device>, command_pool: &Rc<CommandPool>) -> VResult<Rc<Self>> {
         debug!("Creating command buffer");
         let device = device.clone();
         let command_pool = command_pool.clone();
@@ -38,7 +38,7 @@ impl CommandBuffer {
 
         let command_buffer = command_buffers_or_err.map(|some| some[0])?;
 
-        Ok(Rc::new(CommandBuffer {
+        Ok(Rc::new(Self {
             device,
             command_pool,
             command_buffer,

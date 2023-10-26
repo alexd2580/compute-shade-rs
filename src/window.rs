@@ -8,15 +8,15 @@ use ash::vk::SurfaceKHR as VkSurface;
 pub struct Window(winit::window::Window);
 
 impl Window {
-    pub fn new(event_loop: &EventLoop) -> VResult<Self> {
+    pub fn new(event_loop: &EventLoop, resizeable: bool) -> VResult<Self> {
         debug!("Initializing video system");
 
         let window = winit::window::WindowBuilder::new()
-            .with_resizable(false)
+            .with_resizable(resizeable)
             .with_title("visualize-rs")
             .build(event_loop)?;
 
-        Ok(Window(window))
+        Ok(Self(window))
     }
 
     pub fn enumerate_required_extensions(&self) -> VResult<Vec<*const i8>> {

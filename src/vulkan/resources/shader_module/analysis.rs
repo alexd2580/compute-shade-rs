@@ -34,6 +34,7 @@ fn simplify_layout_qualifier_spec(
 ) -> VResult<()> {
     use syntax::LayoutQualifierSpec as LQS;
 
+    #[allow(clippy::match_wildcard_for_single_variants)]
     match layout_qualifier_spec {
         // Unpack layout qualifier spec, expect identifiers only.
         LQS::Identifier(name, maybe_value_box) => {
@@ -105,7 +106,7 @@ fn simplify_type_qualifier(type_qualifier: &syntax::TypeQualifier) -> VResult<Ty
 fn match_globals(
     type_qualifier: &syntax::TypeQualifier,
     _global_names: &[syntax::Identifier],
-) -> Result<LocalSize, Error> {
+) -> VResult<LocalSize> {
     let type_properties = simplify_type_qualifier(type_qualifier)?;
 
     if type_properties.storage != Some(syntax::StorageQualifier::In) {
@@ -124,7 +125,7 @@ fn match_globals(
 pub trait DescriptorInfo {
     fn storage(&self) -> vk::DescriptorType;
     fn set_index(&self) -> usize;
-    fn binding(&self) -> Result<usize, Error>;
+    fn binding(&self) -> VResult<usize>;
     fn name(&self) -> &str;
 }
 
@@ -156,7 +157,7 @@ impl DescriptorInfo for VariableDeclaration {
         })
     }
 
-    fn binding(&self) -> Result<usize, Error> {
+    fn binding(&self) -> VResult<usize> {
         self.binding.ok_or_else(|| {
             let msg = format!("Block '{}' does not specify a binding.", self.name);
             Error::Local(msg)
@@ -310,7 +311,7 @@ impl BlockField {
     }
 }
 
-fn match_block_field(block_field: &syntax::StructFieldSpecifier) -> Result<BlockField, Error> {
+fn match_block_field(block_field: &syntax::StructFieldSpecifier) -> VResult<BlockField> {
     let syntax::StructFieldSpecifier {
         qualifier: type_qualifier,
         ty: type_specifier,
@@ -324,44 +325,40 @@ fn match_block_field(block_field: &syntax::StructFieldSpecifier) -> Result<Block
 
     let type_specifier = simplify_type_specifier(type_specifier)?;
 
-    let (name, dimensions) = if let [syntax::ArrayedIdentifier { ident, array_spec }] =
-        &identifiers[..]
-    {
-        let name = ident.to_string();
-        let dimensions = if let Some(syntax::ArraySpecifier {
-            dimensions: syntax::NonEmpty(dimensions),
-        }) = array_spec
-        {
-            Some(
-                dimensions
-                    .iter()
-                    .map(|sizing| {
-                        if let syntax::ArraySpecifierDimension::ExplicitlySized(expr_box) = sizing {
-                            if let syntax::Expr::IntConst(value) = **expr_box {
-                                Ok(Some(usize::try_from(value).unwrap()))
-                            } else {
-                                let msg =
-                                    format!("Unexpected array dimension value: {:?}", **expr_box);
-                                Err(Error::Local(msg))
-                            }
-                        } else {
-                            Ok(None)
-                        }
-                    })
-                    .collect::<Result<Vec<Option<usize>>, Error>>()?,
-            )
-        } else {
-            None
-        };
-
-        (name, dimensions)
-    } else {
-        let msg = format!("Unexpected identifiers: {identifiers:?}");
-        return Err(Error::Local(msg));
+    let arrayed_identifier = match &identifiers[..] {
+        [x] => x,
+        other => {
+            let msg = format!("Unexpected identifiers: {other:?}");
+            return Err(Error::Local(msg));
+        }
     };
+    let syntax::ArrayedIdentifier { ident, array_spec } = arrayed_identifier;
+    let dimensions = array_spec
+        .as_ref()
+        .map(|array_specifier| {
+            let syntax::ArraySpecifier {
+                dimensions: syntax::NonEmpty(dimensions),
+            } = array_specifier;
+            dimensions
+                .iter()
+                .map(|sizing| {
+                    if let syntax::ArraySpecifierDimension::ExplicitlySized(expr_box) = sizing {
+                        if let syntax::Expr::IntConst(value) = **expr_box {
+                            Ok(Some(usize::try_from(value).unwrap()))
+                        } else {
+                            let msg = format!("Unexpected array dimension value: {:?}", **expr_box);
+                            Err(Error::Local(msg))
+                        }
+                    } else {
+                        Ok(None)
+                    }
+                })
+                .collect::<VResult<Vec<Option<usize>>>>()
+        })
+        .transpose()?;
 
     Ok(BlockField {
-        name,
+        name: ident.to_string(),
         type_specifier,
         offset: type_properties.and_then(|p| p.offset),
         dimensions,
@@ -370,8 +367,8 @@ fn match_block_field(block_field: &syntax::StructFieldSpecifier) -> Result<Block
 
 #[derive(Debug)]
 pub struct BlockDeclaration {
-    pub name: String,
-    pub identifier: Option<String>,
+    struct_name: String,
+    variable_name: Option<String>,
     pub push_constant: bool,
     pub storage: vk::DescriptorType,
     pub binding: Option<usize>,
@@ -386,20 +383,20 @@ impl DescriptorInfo for BlockDeclaration {
 
     fn set_index(&self) -> usize {
         self.set.unwrap_or_else(|| {
-            warn!("Assuming set=0 for block {}", self.name);
+            warn!("Assuming set=0 for block {}", self.struct_name);
             0 // TODO move this to parsing stage.
         })
     }
 
-    fn binding(&self) -> Result<usize, Error> {
+    fn binding(&self) -> VResult<usize> {
         self.binding.ok_or_else(|| {
-            let msg = format!("Block '{}' does not specify a binding.", self.name);
+            let msg = format!("Block '{}' does not specify a binding.", self.struct_name);
             Error::Local(msg)
         }) // TODO move to parsing stage?
     }
 
     fn name(&self) -> &str {
-        &self.name
+        self.variable_name.as_ref().unwrap_or(&self.struct_name)
     }
 }
 
@@ -423,7 +420,7 @@ impl BlockDeclaration {
     }
 }
 
-fn match_block(block: &syntax::Block) -> Result<BlockDeclaration, Error> {
+fn match_block(block: &syntax::Block) -> VResult<BlockDeclaration> {
     let syntax::Block {
         qualifier: type_qualifier,
         name,
@@ -431,17 +428,17 @@ fn match_block(block: &syntax::Block) -> Result<BlockDeclaration, Error> {
         identifier,
     } = block;
 
-    let name = name.clone();
-
-    let identifier = if let Some(syntax::ArrayedIdentifier { ident, array_spec }) = identifier {
-        if array_spec.is_some() {
-            let msg = format!("Unexpected array spec: {array_spec:?}");
-            return Err(Error::Local(msg));
-        }
-        Some(ident.to_string())
-    } else {
-        None
-    };
+    let identifier = identifier
+        .as_ref()
+        .map(|arrayed_identifier| {
+            let syntax::ArrayedIdentifier { ident, array_spec } = arrayed_identifier;
+            if array_spec.is_some() {
+                let msg = format!("Unexpected array spec: {array_spec:?}");
+                return Err(Error::Local(msg));
+            }
+            Ok(ident.to_string())
+        })
+        .transpose()?;
 
     let type_properties = simplify_type_qualifier(type_qualifier)?;
 
@@ -457,11 +454,11 @@ fn match_block(block: &syntax::Block) -> Result<BlockDeclaration, Error> {
     let fields = fields
         .iter()
         .map(match_block_field)
-        .collect::<Result<_, _>>()?;
+        .collect::<VResult<_>>()?;
 
     Ok(BlockDeclaration {
-        name: name.to_string(),
-        identifier,
+        struct_name: name.to_string(),
+        variable_name: identifier,
         push_constant: type_properties.push_constant,
         storage,
         binding: type_properties.binding,
@@ -473,7 +470,7 @@ fn match_block(block: &syntax::Block) -> Result<BlockDeclaration, Error> {
 pub type LocalSize = (usize, usize, usize);
 pub type ShaderIO = (LocalSize, Vec<VariableDeclaration>, Vec<BlockDeclaration>);
 
-pub fn analyze_shader(path: &Path) -> Result<ShaderIO, Error> {
+pub fn analyze_shader(path: &Path) -> VResult<ShaderIO> {
     let shader_code = fs::read_to_string(path).map_err(|err| {
         Error::Local(format!("File '{}' cannot be read: {err:?}", path.display()))
     })?;

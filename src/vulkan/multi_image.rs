@@ -3,7 +3,7 @@ use std::{ops::Deref, rc::Rc};
 use ash::vk;
 use log::debug;
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{
     resources::{
@@ -28,7 +28,7 @@ impl MultiImageUnit {
         surface_info: &SurfaceInfo,
         size: vk::Extent2D,
         image_subresource_range: &vk::ImageSubresourceRange,
-    ) -> Result<Self, Error> {
+    ) -> VResult<Self> {
         let image = Image::new(device, surface_info, size)?;
         let required_memory_size = image.get_required_memory_size().unwrap();
         let memory = DeviceMemory::new(
@@ -41,7 +41,7 @@ impl MultiImageUnit {
 
         let view = ImageView::new(device, &image, surface_info, image_subresource_range)?;
 
-        Ok(MultiImageUnit {
+        Ok(Self {
             image,
             memory,
             view,
@@ -67,7 +67,7 @@ impl MultiImage {
         image_subresource_range: &vk::ImageSubresourceRange,
         size: vk::Extent2D,
         num_images: usize,
-    ) -> Result<Rc<Self>, Error> {
+    ) -> VResult<Rc<Self>> {
         debug!("Creating image of size {:?}", size);
         let images = (0..num_images)
             .map(|_| {
@@ -79,8 +79,8 @@ impl MultiImage {
                     image_subresource_range,
                 )
             })
-            .collect::<Result<Vec<_>, Error>>()?;
-        Ok(Rc::new(MultiImage(images)))
+            .collect::<VResult<Vec<_>>>()?;
+        Ok(Rc::new(Self(images)))
     }
 }
 
@@ -96,7 +96,7 @@ impl Vulkan {
         name: &str,
         size: vk::Extent2D,
         num_images: Option<usize>,
-    ) -> Result<Rc<MultiImage>, Error> {
+    ) -> VResult<Rc<MultiImage>> {
         unsafe {
             let num_images = num_images.unwrap_or(self.surface_info.desired_image_count);
             let image = MultiImage::new(

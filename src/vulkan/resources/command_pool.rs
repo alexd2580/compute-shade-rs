@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::{self, vk};
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{device::Device, physical_device::PhysicalDevice};
 
@@ -22,10 +22,7 @@ impl Deref for CommandPool {
 }
 
 impl CommandPool {
-    pub unsafe fn new(
-        physical_device: &PhysicalDevice,
-        device: &Rc<Device>,
-    ) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(physical_device: &PhysicalDevice, device: &Rc<Device>) -> VResult<Rc<Self>> {
         debug!("Creating command pool");
         let device = device.clone();
 
@@ -35,7 +32,7 @@ impl CommandPool {
 
         let command_pool = device.create_command_pool(&pool_create_info, None)?;
 
-        Ok(Rc::new(CommandPool {
+        Ok(Rc::new(Self {
             device,
             command_pool,
         }))

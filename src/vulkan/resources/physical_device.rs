@@ -6,7 +6,7 @@ use log::debug;
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::{Error, VResult};
 
 use super::{instance::Instance, surface::Surface};
 
@@ -87,7 +87,7 @@ fn choose_image_memory_type(index: u32, memory_type: vk::MemoryType) -> Option<u
 }
 
 impl PhysicalDevice {
-    pub unsafe fn new(instance: &Instance, surface: &Surface) -> Result<Rc<PhysicalDevice>, Error> {
+    pub unsafe fn new(instance: &Instance, surface: &Surface) -> VResult<Rc<Self>> {
         debug!("Choosing physical device");
 
         let physical_devices = instance.enumerate_physical_devices()?;
@@ -115,7 +115,7 @@ impl PhysicalDevice {
             })
             .ok_or_else(|| Error::Local("Couldn't find suitable memory type".to_owned()))?;
 
-        Ok(Rc::new(PhysicalDevice {
+        Ok(Rc::new(Self {
             physical_device,
             compute_queue_family_index,
             buffer_memory_type_index,

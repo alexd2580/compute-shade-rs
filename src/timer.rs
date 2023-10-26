@@ -12,6 +12,7 @@ pub struct Timer {
 }
 
 impl Timer {
+    #[must_use]
     pub fn new(alpha: f32) -> Timer {
         Timer {
             alpha,

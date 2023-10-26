@@ -5,7 +5,7 @@ use log::debug;
 use ash::vk;
 
 use crate::{
-    error::Error,
+    error::{Error, VResult},
     vulkan::{
         resources::shader_module::analysis::DescriptorInfo, AvailableBuffers, AvailableImages,
     },
@@ -39,10 +39,12 @@ pub struct DescriptorBinding {
 }
 
 impl DescriptorBinding {
+    #[must_use]
     pub fn binding(&self) -> usize {
         self.binding
     }
 
+    #[must_use]
     pub fn as_descriptor_set_layout_binding(&self) -> vk::DescriptorSetLayoutBinding {
         vk::DescriptorSetLayoutBinding {
             binding: u32::try_from(self.binding).unwrap(),
@@ -60,7 +62,7 @@ impl DescriptorBinding {
         present_name: &str,
         present_index: usize,
         frame_index: usize,
-    ) -> Result<vk::WriteDescriptorSet, Error> {
+    ) -> VResult<vk::WriteDescriptorSet> {
         if self.instances.is_empty() {
             debug!(
                 "Associating buffers for binding {}: {}",
@@ -131,6 +133,7 @@ impl DerefMut for Descriptors {
 }
 
 impl Descriptors {
+    #[must_use]
     pub fn new(shader_module: &ShaderModule) -> Self {
         debug!("Creating descriptor bindings");
 
@@ -152,7 +155,7 @@ impl Descriptors {
             .iter()
             .filter(|declaration| declaration.binding.is_some())
             .map(|declaration| DescriptorBinding {
-                name: declaration.identifier.as_ref().unwrap().clone(),
+                name: declaration.name().to_string(),
                 binding: declaration.binding.unwrap(),
                 storage_type: declaration.storage,
                 instances: Vec::new(),
@@ -168,7 +171,7 @@ impl Descriptors {
         present_name: &str,
         present_index: usize,
         frame_index: usize,
-    ) -> Result<Vec<vk::WriteDescriptorSet>, Error> {
+    ) -> VResult<Vec<vk::WriteDescriptorSet>> {
         self.iter_mut()
             .map(|descriptor| {
                 descriptor.get_write_descriptor_set_entry(

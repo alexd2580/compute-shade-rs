@@ -2,7 +2,7 @@ use std::{ops::Deref, rc::Rc, slice::Iter};
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{device::Device, image::Image, surface_info::SurfaceInfo};
 
@@ -25,7 +25,7 @@ impl ImageView {
         image: &Image,
         surface_info: &SurfaceInfo,
         image_subresource_range: &vk::ImageSubresourceRange,
-    ) -> Result<Rc<Self>, Error> {
+    ) -> VResult<Rc<Self>> {
         let device = device.clone();
         let format = surface_info.surface_format.format;
         let component_mapping = vk::ComponentMapping::default();
@@ -38,7 +38,7 @@ impl ImageView {
             .image(**image);
         let image_view = device.create_image_view(&create_view_info, None)?;
 
-        Ok(Rc::new(ImageView { device, image_view }))
+        Ok(Rc::new(Self { device, image_view }))
     }
 
     pub unsafe fn many(
@@ -46,7 +46,7 @@ impl ImageView {
         images: Iter<impl Deref<Target = Image>>,
         surface_info: &SurfaceInfo,
         image_subresource_range: &vk::ImageSubresourceRange,
-    ) -> Result<Vec<Rc<Self>>, Error> {
+    ) -> VResult<Vec<Rc<Self>>> {
         images
             .map(|image| ImageView::new(device, image, surface_info, image_subresource_range))
             .collect()

@@ -4,8 +4,7 @@ use log::debug;
 
 use ash::{self, vk};
 
-use crate::error::Error;
-use crate::window::Window;
+use crate::{error::VResult, window::Window};
 
 pub struct Instance {
     pub instance: ash::Instance,
@@ -20,7 +19,7 @@ impl Deref for Instance {
 }
 
 impl Instance {
-    pub unsafe fn new(window: &Window, entry: &ash::Entry) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(window: &Window, entry: &ash::Entry) -> VResult<Rc<Self>> {
         debug!("Creating instance");
         let app_info = vk::ApplicationInfo::builder().api_version(vk::make_api_version(0, 1, 3, 0));
 
@@ -46,7 +45,7 @@ impl Instance {
             .enabled_layer_names(&layer_names);
 
         let instance = entry.create_instance(&create_info, None)?;
-        Ok(Rc::new(Instance { instance }))
+        Ok(Rc::new(Self { instance }))
     }
 }
 

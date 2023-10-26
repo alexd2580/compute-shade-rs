@@ -2,7 +2,7 @@ use std::{ffi::c_void, ops::Deref, rc::Rc};
 
 use ash::{self, vk};
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::{device::Device, device_memory::DeviceMemory};
 
@@ -21,7 +21,7 @@ impl Deref for MemoryMapping {
 }
 
 impl MemoryMapping {
-    pub unsafe fn new(device: &Rc<Device>, memory: &Rc<DeviceMemory>) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(device: &Rc<Device>, memory: &Rc<DeviceMemory>) -> VResult<Rc<Self>> {
         let device = device.clone();
         let memory = memory.clone();
         // https://stackoverflow.com/questions/64296581/do-i-need-to-memory-map-unmap-a-buffer-every-time-the-content-of-the-buffer-chan
@@ -32,7 +32,7 @@ impl MemoryMapping {
             vk::MemoryMapFlags::empty(),
         )?;
 
-        Ok(Rc::new(MemoryMapping {
+        Ok(Rc::new(Self {
             device,
             memory,
             mapped,

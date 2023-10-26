@@ -29,9 +29,6 @@ impl Display for Error {
 
 impl From<ash::vk::Result> for Error {
     fn from(value: ash::vk::Result) -> Self {
-        if value != ash::vk::Result::ERROR_OUT_OF_DATE_KHR {
-            panic!("{}", value);
-        }
         Self::Vk(value)
     }
 }

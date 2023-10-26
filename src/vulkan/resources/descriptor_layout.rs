@@ -4,7 +4,10 @@ use log::debug;
 
 use ash::vk;
 
-use crate::{error::Error, vulkan::resources::descriptors::DescriptorBinding};
+use crate::{
+    error::{Error, VResult},
+    vulkan::resources::descriptors::DescriptorBinding,
+};
 
 use super::{descriptors::Descriptors, device::Device};
 
@@ -22,7 +25,7 @@ impl Deref for DescriptorLayout {
 }
 
 impl DescriptorLayout {
-    pub unsafe fn new(device: &Rc<Device>, descriptors: &Descriptors) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(device: &Rc<Device>, descriptors: &Descriptors) -> VResult<Rc<Self>> {
         debug!("Creating descriptor layouts");
 
         let mut used_bindings = HashMap::new();
@@ -35,9 +38,8 @@ impl DescriptorLayout {
                     binding, descriptor.name, prev
                 );
                 return Err(Error::Local(msg));
-            } else {
-                used_bindings.insert(binding, name);
             }
+            used_bindings.insert(binding, name);
         }
 
         let device = device.clone();

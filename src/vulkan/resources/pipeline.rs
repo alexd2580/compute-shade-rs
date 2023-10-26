@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::{Error, VResult};
 
 use super::{device::Device, pipeline_layout::PipelineLayout, shader_module::ShaderModule};
 
@@ -26,7 +26,7 @@ impl Pipeline {
         device: &Rc<Device>,
         shader_module: &ShaderModule,
         pipeline_layout: &PipelineLayout,
-    ) -> Result<Rc<Self>, Error> {
+    ) -> VResult<Rc<Self>> {
         debug!("Creating pipleine");
         let device = device.clone();
 
@@ -55,7 +55,7 @@ impl Pipeline {
 
         let pipeline = pipelines[0];
 
-        Ok(Rc::new(Pipeline { device, pipeline }))
+        Ok(Rc::new(Self { device, pipeline }))
     }
 }
 

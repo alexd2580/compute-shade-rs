@@ -10,7 +10,7 @@ use std::{
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::{Error, VResult};
 
 use self::analysis::DescriptorInfo;
 
@@ -18,7 +18,7 @@ use super::device::Device;
 
 pub mod analysis;
 
-fn compile_shader_file(file: &Path) -> Result<shaderc::CompilationArtifact, Error> {
+fn compile_shader_file(file: &Path) -> VResult<shaderc::CompilationArtifact> {
     const MAGIC_NUMBER: u32 = 0x0723_0203;
 
     let source = fs::read_to_string(file)?;
@@ -85,7 +85,7 @@ impl Display for ShaderModule {
         }
         writeln!(f, "  Block Declarations:")?;
         for declaration in &self.block_declarations {
-            writeln!(f, "    {} {:?}:", declaration.name, declaration.identifier)?;
+            writeln!(f, "    {}:", declaration.name())?;
             writeln!(f, "      Type:    {:?}", declaration.storage)?;
             writeln!(f, "      Set:     {:?}", declaration.set)?;
             writeln!(f, "      Binding: {:?}", declaration.binding)?;
@@ -95,7 +95,7 @@ impl Display for ShaderModule {
 }
 
 impl ShaderModule {
-    pub unsafe fn new(device: &Rc<Device>, source_path: &Path) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(device: &Rc<Device>, source_path: &Path) -> VResult<Rc<Self>> {
         debug!("Creating shader module");
         let (local_size, variable_declarations, block_declarations) =
             analysis::analyze_shader(source_path)?;
@@ -123,6 +123,7 @@ impl ShaderModule {
         Ok(Rc::new(shader_module))
     }
 
+    #[must_use]
     pub fn push_constants_declaration(&self) -> Option<&analysis::BlockDeclaration> {
         self.block_declarations
             .iter()

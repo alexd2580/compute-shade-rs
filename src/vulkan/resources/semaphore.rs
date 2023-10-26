@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::device::Device;
 
@@ -22,11 +22,11 @@ impl Deref for Semaphore {
 }
 
 impl Semaphore {
-    pub unsafe fn new(device: &Rc<Device>) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(device: &Rc<Device>) -> VResult<Rc<Self>> {
         debug!("Creating semaphore");
         let device = device.clone();
         let semaphore = device.create_semaphore(&vk::SemaphoreCreateInfo::default(), None)?;
-        Ok(Rc::new(Semaphore { device, semaphore }))
+        Ok(Rc::new(Self { device, semaphore }))
     }
 }
 

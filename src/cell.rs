@@ -19,10 +19,12 @@ impl<T> Cell<T> {
         Self(Rc::new(RefCell::new(value)))
     }
 
+    #[must_use]
     pub fn as_ref(&self) -> Ref<T> {
         self.0.borrow()
     }
 
+    #[must_use]
     pub fn as_mut_ref(&self) -> RefMut<T> {
         self.0.borrow_mut()
     }

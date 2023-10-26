@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::{extensions::khr::Surface as SurfaceLoader, vk};
 
-use crate::{error::Error, window::Window};
+use crate::{error::VResult, window::Window};
 
 use super::instance::Instance;
 
@@ -27,12 +27,12 @@ impl Surface {
         entry: &ash::Entry,
         instance: &Instance,
         surface_loader: &SurfaceLoader,
-    ) -> Result<Rc<Self>, Error> {
+    ) -> VResult<Rc<Self>> {
         debug!("Creating surface");
         let surface_loader = surface_loader.clone();
 
         let surface = window.create_surface(entry, instance)?;
-        Ok(Rc::new(Surface {
+        Ok(Rc::new(Self {
             surface_loader,
             surface,
         }))

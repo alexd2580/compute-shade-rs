@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::device::Device;
 
@@ -22,21 +22,21 @@ impl Deref for Fence {
 }
 
 impl Fence {
-    pub unsafe fn new(device: &Rc<Device>) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(device: &Rc<Device>) -> VResult<Rc<Self>> {
         debug!("Creating fence");
         let device = device.clone();
         let create_info = vk::FenceCreateInfo::builder().flags(vk::FenceCreateFlags::SIGNALED);
         let fence = device.create_fence(&create_info, None)?;
-        Ok(Rc::new(Fence { device, fence }))
+        Ok(Rc::new(Self { device, fence }))
     }
 
-    pub unsafe fn wait(&self) -> Result<(), Error> {
+    pub unsafe fn wait(&self) -> VResult<()> {
         Ok(self
             .device
             .wait_for_fences(&[self.fence], true, std::u64::MAX)?)
     }
 
-    pub unsafe fn reset(&self) -> Result<(), Error> {
+    pub unsafe fn reset(&self) -> VResult<()> {
         Ok(self.device.reset_fences(&[self.fence])?)
     }
 }

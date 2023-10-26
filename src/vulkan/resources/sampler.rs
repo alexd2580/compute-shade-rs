@@ -4,7 +4,7 @@ use log::debug;
 
 use ash::vk;
 
-use crate::error::Error;
+use crate::error::VResult;
 
 use super::device::Device;
 
@@ -22,7 +22,7 @@ impl Deref for Sampler {
 }
 
 impl Sampler {
-    pub unsafe fn new(device: &Rc<Device>) -> Result<Rc<Self>, Error> {
+    pub unsafe fn new(device: &Rc<Device>) -> VResult<Rc<Self>> {
         debug!("Creating sampler");
         let device = device.clone();
         let sampler_create_info = vk::SamplerCreateInfo {
@@ -39,7 +39,7 @@ impl Sampler {
         };
         let sampler = device.create_sampler(&sampler_create_info, None)?;
 
-        Ok(Rc::new(Sampler { device, sampler }))
+        Ok(Rc::new(Self { device, sampler }))
     }
 }
 

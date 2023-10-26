@@ -8,6 +8,7 @@ pub struct RingBuffer<T> {
 }
 
 impl<T: Copy + Default> RingBuffer<T> {
+    #[must_use]
     pub fn new(size: usize) -> Self {
         RingBuffer {
             size,
@@ -28,6 +29,7 @@ impl<T: Copy> RingBuffer<T> {
         }
     }
 
+    #[must_use]
     pub fn new_with_data(data: Vec<T>) -> Self {
         let size = data.len();
         RingBuffer {
@@ -53,6 +55,7 @@ impl<T: Copy> RingBuffer<T> {
         )
     }
 
+    #[must_use]
     pub fn offset_index(&self, pos: usize, neg: usize) -> usize {
         let idx = self.write_index + pos + self.size - neg;
         if idx >= self.size {
@@ -62,6 +65,7 @@ impl<T: Copy> RingBuffer<T> {
         }
     }
 
+    #[must_use]
     pub fn at_offset(&self, pos: usize, neg: usize) -> &T {
         &self.data[self.offset_index(pos, neg)]
     }
@@ -75,6 +79,7 @@ impl<T: Copy> RingBuffer<T> {
         };
     }
 
+    #[must_use]
     pub fn last(&self) -> T {
         self.data[self.prev_index]
     }
@@ -84,6 +89,7 @@ impl<T: Copy> RingBuffer<T> {
         self.advance();
     }
 
+    #[must_use]
     pub fn serialized_size(&self) -> usize {
         self.size * mem::size_of::<T>() + 2 * mem::size_of::<i32>()
     }
@@ -102,6 +108,7 @@ impl<T: Copy> RingBuffer<T> {
     /// Write the ringbuffer to the pointer, posting its size and write index first and then
     /// updating only the section that has been modified, namely `[read_index..(potential
     /// wraparound)..write_index]`.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn write_to_pointer(&self, read_index: usize, write_index: usize, target: *mut c_void) {
         unsafe {
             *target.cast::<u32>() = u32::try_from(self.size).unwrap();

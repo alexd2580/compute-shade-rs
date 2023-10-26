@@ -22,10 +22,12 @@ impl<Content> ThreadShared<Content> {
         ThreadShared(Arc::new(UnsafeData(UnsafeCell::new(content))))
     }
 
+    #[must_use]
     pub fn read(&self) -> &Content {
         unsafe { self.0.get().as_ref() }.unwrap()
     }
 
+    #[must_use]
     #[allow(clippy::mut_from_ref)]
     pub fn write(&self) -> &mut Content {
         unsafe { self.0.get().as_mut() }.unwrap()

@@ -2,7 +2,7 @@ use log::{debug, error, warn};
 
 use ash::{extensions::khr::Surface as SurfaceLoader, vk};
 
-use crate::error::Error;
+use crate::error::{Error, VResult};
 
 use super::{physical_device::PhysicalDevice, surface::Surface};
 
@@ -21,7 +21,7 @@ impl SurfaceInfo {
         surface_loader: &SurfaceLoader,
         surface: &Surface,
         vsync: bool,
-    ) -> Result<Self, Error> {
+    ) -> VResult<Self> {
         debug!("Collecting surface info");
 
         let surface_formats =
@@ -76,7 +76,7 @@ impl SurfaceInfo {
             };
         }
 
-        Ok(SurfaceInfo {
+        Ok(Self {
             surface_format,
             surface_capabilities,
             desired_present_mode,
