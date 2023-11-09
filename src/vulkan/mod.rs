@@ -374,7 +374,7 @@ impl Vulkan {
         self.swapchain_image_views = ImageView::many(
             &self.device,
             self.swapchain_images.iter(),
-            &self.surface_info,
+            self.surface_info.surface_format.format,
             &self.image_subresource_range,
         )?;
         let views_and_samplers = self

@@ -4,7 +4,7 @@ use ash::{extensions::khr::Swapchain as SwapchainLoader, vk};
 
 use crate::error::VResult;
 
-use super::{device::Device, surface_info::SurfaceInfo, swapchain::Swapchain};
+use super::{device::Device, swapchain::Swapchain};
 
 #[allow(clippy::module_name_repetitions)]
 pub struct RegularImage {
@@ -36,13 +36,13 @@ impl Deref for Image {
 impl Image {
     pub unsafe fn new(
         device: &Rc<Device>,
-        surface_info: &SurfaceInfo,
+        format: vk::Format,
         size: vk::Extent2D,
     ) -> VResult<Rc<Self>> {
         let device = device.clone();
         let image_create_info = vk::ImageCreateInfo::builder()
             .image_type(vk::ImageType::TYPE_2D)
-            .format(surface_info.surface_format.format)
+            .format(format)
             .extent(size.into())
             .mip_levels(1)
             .array_layers(1)

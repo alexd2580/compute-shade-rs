@@ -4,7 +4,7 @@ use ash::vk;
 
 use crate::error::VResult;
 
-use super::{device::Device, image::Image, surface_info::SurfaceInfo};
+use super::{device::Device, image::Image};
 
 pub struct ImageView {
     device: Rc<Device>,
@@ -23,11 +23,10 @@ impl ImageView {
     pub unsafe fn new(
         device: &Rc<Device>,
         image: &Image,
-        surface_info: &SurfaceInfo,
+        format: vk::Format,
         image_subresource_range: &vk::ImageSubresourceRange,
     ) -> VResult<Rc<Self>> {
         let device = device.clone();
-        let format = surface_info.surface_format.format;
         let component_mapping = vk::ComponentMapping::default();
 
         let create_view_info = vk::ImageViewCreateInfo::builder()
@@ -44,11 +43,11 @@ impl ImageView {
     pub unsafe fn many(
         device: &Rc<Device>,
         images: Iter<impl Deref<Target = Image>>,
-        surface_info: &SurfaceInfo,
+        format: vk::Format,
         image_subresource_range: &vk::ImageSubresourceRange,
     ) -> VResult<Vec<Rc<Self>>> {
         images
-            .map(|image| ImageView::new(device, image, surface_info, image_subresource_range))
+            .map(|image| Self::new(device, image, format, image_subresource_range))
             .collect()
     }
 }

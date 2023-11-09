@@ -1,4 +1,5 @@
 pub use winit;
+pub use ash::vk;
 
 pub mod cell;
 pub mod error;

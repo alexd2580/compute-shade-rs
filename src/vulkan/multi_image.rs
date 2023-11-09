@@ -8,7 +8,7 @@ use crate::error::VResult;
 use super::{
     resources::{
         device::Device, device_memory::DeviceMemory, image::Image, image_view::ImageView,
-        physical_device::PhysicalDevice, surface_info::SurfaceInfo,
+        physical_device::PhysicalDevice,
     },
     Vulkan,
 };
@@ -25,11 +25,11 @@ impl MultiImageUnit {
     pub unsafe fn new(
         physical_device: &PhysicalDevice,
         device: &Rc<Device>,
-        surface_info: &SurfaceInfo,
+        format: vk::Format,
         size: vk::Extent2D,
         image_subresource_range: &vk::ImageSubresourceRange,
     ) -> VResult<Self> {
-        let image = Image::new(device, surface_info, size)?;
+        let image = Image::new(device, format, size)?;
         let required_memory_size = image.get_required_memory_size().unwrap();
         let memory = DeviceMemory::new(
             physical_device.image_memory_type_index,
@@ -39,7 +39,7 @@ impl MultiImageUnit {
 
         device.bind_image_memory(**image, **memory, 0)?;
 
-        let view = ImageView::new(device, &image, surface_info, image_subresource_range)?;
+        let view = ImageView::new(device, &image, format, image_subresource_range)?;
 
         Ok(Self {
             image,
@@ -63,7 +63,7 @@ impl MultiImage {
     pub unsafe fn new(
         physical_device: &Rc<PhysicalDevice>,
         device: &Rc<Device>,
-        surface_info: &SurfaceInfo,
+        format: vk::Format,
         image_subresource_range: &vk::ImageSubresourceRange,
         size: vk::Extent2D,
         num_images: usize,
@@ -74,7 +74,7 @@ impl MultiImage {
                 MultiImageUnit::new(
                     physical_device,
                     device,
-                    surface_info,
+                    format,
                     size,
                     image_subresource_range,
                 )
@@ -94,6 +94,7 @@ impl Vulkan {
     pub fn new_multi_image(
         &mut self,
         name: &str,
+        format: vk::Format,
         size: vk::Extent2D,
         num_images: Option<usize>,
     ) -> VResult<Rc<MultiImage>> {
@@ -102,7 +103,7 @@ impl Vulkan {
             let image = MultiImage::new(
                 &self.physical_device,
                 &self.device,
-                &self.surface_info,
+                format,
                 &self.image_subresource_range,
                 size,
                 num_images,
